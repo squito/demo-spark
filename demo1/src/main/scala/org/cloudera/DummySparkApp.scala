@@ -20,12 +20,24 @@ package org.apache.spark
 import java.io.File
 import java.util.Date
 
+import com.quantifind.sumac.validation.Required
+import com.quantifind.sumac.{FieldArgs, ArgMain}
 import org.apache.commons.io.FileUtils
+import org.apache.hadoop.fs.{FileSystem, Path}
 import org.apache.spark.SparkContext._  //not needed after spark 1.3
 
-object DummySparkApp {
-  def main(args: Array[String]): Unit = {
-    val sc = new SparkContext(new SparkConf().setAppName("Spark Count"))
+class DummySparkAppArgs extends FieldArgs {
+  @Required
+  var path: String = _
+
+  var appName: String = "Dummy app"
+
+  var sleep: Boolean = false
+}
+
+object DummySparkApp extends ArgMain[DummySparkAppArgs] {
+  def main(args: DummySparkAppArgs): Unit = {
+    val sc = new SparkContext(new SparkConf().setAppName(args.appName))
 
     val d = sc.parallelize(1 to 1e6.toInt).cache()
     d.count()
@@ -33,16 +45,18 @@ object DummySparkApp {
     val sums = d.map{x => (x % 10) -> x.toLong}.reduceByKey{_ + _}
     println(sums.first)
 
-    val path = "/Users/irashid/spark-examples/tmp_data/sums"
-    val f = new File(path)
-    FileUtils.deleteDirectory(f)
-    sums.saveAsTextFile(path)
+    val path = new Path(args.path)
+    val fs = path.getFileSystem(sc.hadoopConfiguration)
+    if (fs.exists(path)) fs.delete(path, true)
+    sums.saveAsTextFile(path.toString())
 
-    val txt = sc.textFile(path)
+    val txt = sc.textFile(path.toString())
     println(txt.count)
 
-    println("now sleeping for 1 minute")
-    println(new Date())
-    Thread.sleep(60 * 1000)
+    if (args.sleep) {
+      println("now sleeping for 1 minute")
+      println(new Date())
+      Thread.sleep(60 * 1000)
+    }
   }
 }
