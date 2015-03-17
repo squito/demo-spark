@@ -10,6 +10,9 @@ object MyBuild extends Build {
   lazy val demo1 = Project(id="demo1", base=file("demo1"), settings = demo1Settings).
     settings(net.virtualvoid.sbt.graph.Plugin.graphSettings: _*)
 
+  lazy val streamingDemo = Project(id="streaming-demo", base=file("streaming-demo"), settings = streamingDemoSettings).
+    settings(net.virtualvoid.sbt.graph.Plugin.graphSettings: _*)
+
   def sharedSettings = Defaults.defaultSettings ++ assemblySettings ++
   Seq(
     version := "0.1",
@@ -26,7 +29,7 @@ object MyBuild extends Build {
     ),
     libraryDependencies ++= Seq(
       "com.quantifind" % "sumac_2.10" % "0.3.0",
-      "org.apache.spark" % "spark-core_2.10" % "1.0.0-cdh5.1.0" % "provided",
+      "org.apache.spark" % "spark-core_2.10" % "1.2.0-cdh5.3.2" % "provided",
       "org.scalatest" %% "scalatest" % "2.1.3" % "test"
     ), 
 
@@ -39,5 +42,11 @@ object MyBuild extends Build {
 
   def demo1Settings = sharedSettings ++ Seq(
       name := "demo1"
+    )
+
+  def streamingDemoSettings = demo1Settings ++ Seq(
+      libraryDependencies ++= Seq(
+          "org.apache.spark" % "spark-streaming_2.10" % "1.2.0-cdh5.3.2" % "provided"
+        )
     )
 }
