@@ -17,12 +17,10 @@
 
 package org.apache.spark
 
-import java.io.File
 import java.util.Date
 
 import com.quantifind.sumac.validation.Required
 import com.quantifind.sumac.{FieldArgs, ArgMain}
-import org.apache.commons.io.FileUtils
 import org.apache.hadoop.fs.{FileSystem, Path}
 import org.apache.spark.SparkContext._  //not needed after spark 1.3
 
@@ -39,14 +37,14 @@ object DummySparkApp extends ArgMain[DummySparkAppArgs] {
   def main(args: DummySparkAppArgs): Unit = {
     val sc = new SparkContext(new SparkConf().setAppName(args.appName))
 
-    val d = sc.parallelize(1 to 1e6.toInt).cache()
+    val d = sc.parallelize(1 to 1e6.toInt).cache().setName("initial data set")
     d.count()
 
-    val sums = d.map{x => (x % 10) -> x.toLong}.reduceByKey{_ + _}
+    val sums = d.map{x => (x % 10) -> x.toLong}.reduceByKey{_ + _}.setName("sums")
     println(sums.first)
 
     val path = new Path(args.path)
-    val fs = path.getFileSystem(sc.hadoopConfiguration)
+    val fs: FileSystem = path.getFileSystem(sc.hadoopConfiguration)
     if (fs.exists(path)) fs.delete(path, true)
     sums.saveAsTextFile(path.toString())
 
