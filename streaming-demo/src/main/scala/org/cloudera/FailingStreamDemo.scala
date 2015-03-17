@@ -1,23 +1,40 @@
 package org.cloudera
 
+import com.quantifind.sumac.{FieldArgs, ArgMain}
+
 import org.apache.spark.SparkConf
 import org.apache.spark.rdd.RDD
 import org.apache.spark.streaming.dstream.InputDStream
 import org.apache.spark.streaming.{Time, Seconds, StreamingContext}
 
-object FailingStreamDemo {
-  def main(args: Array[String]): Unit = {
+class FailingStreamDemoArgs extends FieldArgs {
+  var mapDelayTime = 0L
+  var mapDelayBatches = 3
+}
+
+object FailingStreamDemo extends ArgMain [FailingStreamDemoArgs] {
+  def main(args: FailingStreamDemoArgs): Unit = {
     val conf = new SparkConf().setAppName("NetworkWordCount")
     val ssc = new StreamingContext(conf, Seconds(1))
 
+    val delayTime = args.mapDelayTime
+    val delayBatches = args.mapDelayBatches
+
     val input = new IncreasingDStream(10, ssc)
 
+    var rddCount = 0
+
     input.foreachRDD{ rdd =>
+      val thisRDDCount = rddCount
+      println("*** Starting to process RDD : " + thisRDDCount)
       val str = rdd.map{x =>
         if ( x % 100 == 0) throw new RuntimeException("user exception on " + x)
+        if (thisRDDCount % delayBatches == 0)  //create a little backlog, but make sure it can get cleared
+          Thread.sleep(delayTime)
         x
       }.collect().mkString(",")
       println(str)
+      rddCount += 1
     }
 
     ssc.start()
